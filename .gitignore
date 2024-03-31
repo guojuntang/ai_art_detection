@@ -1,0 +1,8 @@
+__pycache__
+data/*
+!data/gen_set.py
+!data/preprocess.py
+models
+.vscode
+
+nohup.out
