@@ -26,11 +26,15 @@ if __name__ == '__main__':
         for label in ['images', 'images_ai']:
             path = f'{folder}/{label}/'
             for file in os.listdir(path):
-                quality = random.randint(75, 95) 
-                img = Image.open(path + file).convert('RGB')
-                img = center_crop(img)
-                img = resize_image(img, 256, 256)
-                save_path = f'{folder}_preprocessed/{label}/'
-                if os.path.exists(save_path) == False:
-                    os.makedirs(save_path)
-                img.save(save_path + file, format='jpeg', quality=quality)
+                try:
+                    quality = random.randint(75, 95) 
+                    img = Image.open(path + file).convert('RGB')
+                    img = center_crop(img)
+                    img = resize_image(img, 512, 512)
+                    save_path = f'{folder}_preprocessed/{label}/'
+                    if os.path.exists(save_path) == False:
+                        os.makedirs(save_path)
+                    img.save(save_path + file, format='jpeg', quality=quality)
+                except Exception as e:
+                    print(e)
+                    print(f'Error processing {path + file}')
