@@ -6,8 +6,8 @@ from networks.resnet import resnet50
 from dataset import ImageDataset
 
 def fine_tune(model,  train_loader, val_loader, criterion, optimizer, lr_scheduler, device, epochs=10):
-    model.train()
     for epoch in range(epochs):
+        model.train()
         loss = 0.0
         total_loss = 0.0
         steps = 0
@@ -92,8 +92,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=56)
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight_decay', type=float, default=0.0005)
-    parser.add_argument('--epochs', type=int, default=30)
-    parser.add_argument('--lr', type=int, default=0.01)
+    parser.add_argument('--epochs', type=int, default=15)
+    parser.add_argument('--lr', type=int, default=0.001)
     parser.add_argument('--weights_file', type=str, default='models/grag2021.pth')
     parser.add_argument('--pin_memory', type=bool, default=False)
     parser.add_argument('--output', type=str, default='models/weights_ft.pth')
