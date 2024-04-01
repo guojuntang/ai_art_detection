@@ -3,12 +3,14 @@ import torch
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from dataset import ImageDataset
-from networks import DualNet
+from networks.DualNet import DualNet
 
-best_acc = 0.0
-best_loss = 100.0
+class Save_best:
+    def __init__(self):
+        self.best_acc = 0.0
+        self.best_loss = 10000
 
-def train(model,  train_loader, val_loader, criterion, optimizer, output_path, lr_scheduler, device, epochs=10):
+def train(model,  train_loader, val_loader, criterion, optimizer, output_path, lr_scheduler, save_best, device, epochs=10):
     train_num = len(train_loader.dataset)
     for epoch in range(epochs):
         model.train()
@@ -33,9 +35,9 @@ def train(model,  train_loader, val_loader, criterion, optimizer, output_path, l
         train_loss = running_loss / step
         train_acc = running_corrects / train_num
         print(f'Training Epoch {epoch+1}/{epochs}, Epoch Loss: {train_loss:.4f}, Epoch Acc: {train_acc:.4f}')
-        validate(model, val_loader, epoch, output_path, optimizer, criterion, device)
+        validate(model, val_loader, epoch, output_path, optimizer, criterion, save_best, device)
 
-def validate(model, val_loader, epoch, output_path, optimizer, criterion, device):
+def validate(model, val_loader, epoch, output_path, optimizer, criterion, save_best, device):
     model.eval()
     val_loss_sum = 0.0
     acc = 0.0
@@ -55,24 +57,24 @@ def validate(model, val_loader, epoch, output_path, optimizer, criterion, device
         print(f"Val epoch {epoch}: "
               f" val_loss: {val_loss:.3f} |"
               f" val_acc: {val_acc:.3f} |\n")
-        if val_acc > best_acc:
-            best_acc = val_acc
+        if val_acc > save_best.best_acc:
+            save_best.best_acc = val_acc
             # best_loss = val_loss / val_num
             torch.save(
-                {'net': model.module.state_dict(),
+                {'net': model.state_dict(),
                     'opt': optimizer.state_dict(),
                     'epoch': epoch,
                     'loss': val_loss,
-                    'acc': best_acc}, output_path + 'model_best_acc.pth'
+                    'acc': save_best.best_acc}, output_path + 'model_best_acc.pth'
             )
 
-        if val_loss < best_loss:
-            best_loss = val_loss
+        if val_loss < save_best.best_loss:
+            save_best.best_loss = val_loss
             torch.save(
-                {'net': model.module.state_dict(),
+                {'net': model.state_dict(),
                     'opt': optimizer.state_dict(),
                     'epoch': epoch,
-                    'loss': best_loss,
+                    'loss': save_best.best_loss,
                     'acc': val_acc
                     }, output_path + 'model_best_loss.pth'
             )
@@ -88,11 +90,12 @@ def main(args):
     model_type = args.model
     output_path = args.output_path
     transform = transforms.Compose([transforms.ToTensor()])
-    train_dataset = ImageDataset('train', transform=transform)
+    train_dataset = ImageDataset('train', transform=transform, label_type=torch.long)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_dataset = ImageDataset('val', transform=transform)
+    val_dataset = ImageDataset('val', transform=transform, label_type=torch.long)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss().to(device)
+    save_best = Save_best()
 
     model = None
     if model_type == 'DualNet':
@@ -106,10 +109,10 @@ def main(args):
         step_size = decay_steps,
         gamma = decay_rate
     )
-    train(model, train_loader, val_loader, criterion, optimizer, output_path, lr_scheduler, device, epochs)
+    train(model, train_loader, val_loader, criterion, optimizer, output_path, lr_scheduler, save_best, device, epochs)
     # save the last model
     torch.save(
-        {'model': model.module.state_dict(),
+        {'model': model.state_dict(),
             'opt': optimizer.state_dict(),
             }, output_path + 'model_last_round.pth'
     )
@@ -117,7 +120,7 @@ def main(args):
 def parse_args():
     parser = argparse.ArgumentParser(description='XNet')
     parser.add_argument('--output_path', default='models/', required=False)
-    parser.add_argument('--batch_size', default=64, type=int, required=False)
+    parser.add_argument('--batch_size', default=16, type=int, required=False)
     parser.add_argument('--epochs', default=120, type=int, required=False)
     parser.add_argument('--lr', default=2e-4, type=float, required=False)
     parser.add_argument('--model', default='DualNet', required=False)

@@ -1,7 +1,7 @@
 import torch.nn as nn
-from crosstrans2 import *
-from noise_3down import *
-from rgb_3down import *
+from .crosstrans2 import *
+from .noise_3down import *
+from .rgb_3down import *
 
 
 class DualNet(nn.Module):
