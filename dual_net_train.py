@@ -4,6 +4,8 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 from dataset import ImageDataset
 from networks.DualNet import DualNet
+from networks.residual_stream import ResidualStream
+from networks.content_stream import ContentStream
 
 class Save_best:
     def __init__(self):
@@ -22,10 +24,7 @@ def train(model,  train_loader, val_loader, criterion, optimizer, output_path, l
             optimizer.zero_grad()
             outputs = model(images)
             predict = torch.max(outputs, dim=1)[1]
-            # print(outputs.size())
-            # print(labels.size())
             loss = criterion(outputs, labels)
-            # print("loss:",loss)
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
@@ -59,7 +58,6 @@ def validate(model, val_loader, epoch, output_path, optimizer, criterion, save_b
               f" val_acc: {val_acc:.3f} |\n")
         if val_acc > save_best.best_acc:
             save_best.best_acc = val_acc
-            # best_loss = val_loss / val_num
             torch.save(
                 {'net': model.state_dict(),
                     'opt': optimizer.state_dict(),
@@ -100,6 +98,10 @@ def main(args):
     model = None
     if model_type == 'DualNet':
         model = DualNet()
+    elif model_type == 'Residual':
+        model = ResidualStream()
+    elif model_type == 'Content':
+        model = ContentStream()
     else:
         raise ValueError('Model not supported')
     model.to(device)
@@ -124,9 +126,6 @@ def parse_args():
     parser.add_argument('--epochs', default=120, type=int, required=False)
     parser.add_argument('--lr', default=2e-4, type=float, required=False)
     parser.add_argument('--model', default='DualNet', required=False)
-    parser.add_argument('--type', default="DALLE", required=False)
-    parser.add_argument('--size', default=256, type=int, required=False)
-    parser.add_argument('--split', default="split0", required=False)
     parser.add_argument('--decay', default=30, type=int, required=False)
     parser.add_argument('--decay_rate', default=0.1, type=float, required=False)
     parser.add_argument('--weight_decay', type=float, default=0.0005)
