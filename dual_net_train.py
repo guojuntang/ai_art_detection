@@ -123,7 +123,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='XNet')
     parser.add_argument('--output_path', default='models/', required=False)
     parser.add_argument('--batch_size', default=26, type=int, required=False)
-    parser.add_argument('--epochs', default=120, type=int, required=False)
+    parser.add_argument('--epochs', default=90, type=int, required=False)
     parser.add_argument('--lr', default=2e-4, type=float, required=False)
     parser.add_argument('--model', default='DualNet', required=False)
     parser.add_argument('--decay', default=30, type=int, required=False)

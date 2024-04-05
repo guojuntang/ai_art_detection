@@ -5,7 +5,12 @@ import argparse
 from networks.resnet import resnet50
 from dataset import ImageDataset
 
-def fine_tune(model,  train_loader, val_loader, criterion, optimizer, lr_scheduler, device, epochs=10):
+class Save_best:
+    def __init__(self):
+        self.best_acc = 0.0
+        self.best_loss = 10000
+
+def fine_tune(model,  train_loader, val_loader, criterion, optimizer, lr_scheduler, save_best, output_path, device, epochs=10):
     for epoch in range(epochs):
         model.train()
         loss = 0.0
@@ -23,10 +28,10 @@ def fine_tune(model,  train_loader, val_loader, criterion, optimizer, lr_schedul
             optimizer.step()
         lr_scheduler.step()
         print(f'Training Epoch {epoch+1}/{epochs}, Epoch Loss: {total_loss / steps:.4f}')
-        validate(model, val_loader, criterion, device)
+        validate(model, val_loader, criterion, epoch, save_best, output_path, device)
     return model
 
-def validate(model, val_loader, criterion, device):
+def validate(model, val_loader, criterion, epoch, save_best, output_path, device):
     model.eval()
     with torch.no_grad():
         total_loss = 0.0
@@ -39,7 +44,16 @@ def validate(model, val_loader, criterion, device):
             total_loss += loss.item()
             total += labels.size(0)
         val_loss = total_loss / total
-    print(f'Validation Loss: {val_loss:.4f}')
+        print(f"Val epoch {epoch}: "
+              f" val_loss: {val_loss:.3f}")
+        if val_loss < save_best.best_loss:
+            save_best.best_loss = val_loss
+            torch.save(
+                {'net': model.state_dict(),
+                    'epoch': epoch,
+                    'loss': save_best.best_loss,
+                    }, output_path + 'model_best_loss.pth'
+            )
 
 def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -49,7 +63,7 @@ def main(args):
     lr = args.lr
     momentum = args.momentum
     weight_decay = args.weight_decay
-    output = args.output
+    output_path = args.output_path
     pin_memory = args.pin_memory
 
     transform = transforms.Compose([transforms.ToTensor(),
@@ -59,6 +73,7 @@ def main(args):
     val_dataset = ImageDataset('val', transform=transform)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, pin_memory=pin_memory)
     criterion = torch.nn.CrossEntropyLoss()
+    save_best = Save_best()
 
 
     model = resnet50(num_classes=1, gap_size=1, stride0=1)
@@ -83,8 +98,8 @@ def main(args):
     )
 
     model.to(device)
-    fine_tune(model, train_loader, val_loader, criterion, optimizer, lr_scheduler, device, epochs)
-    torch.save({'model': model.state_dict()}, output)
+    fine_tune(model, train_loader, val_loader, criterion, optimizer, lr_scheduler, save_best, output_path, device, epochs)
+    torch.save({'model': model.state_dict()}, output_path + 'model_last_round.pth')
 
 
 if __name__ == '__main__':
@@ -94,9 +109,9 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=0.0005)
     parser.add_argument('--epochs', type=int, default=15)
     parser.add_argument('--lr', type=int, default=0.001)
-    parser.add_argument('--weights_file', type=str, default='models/grag2021.pth')
+    parser.add_argument('--weights_file', type=str, default='models/weights/Grag2021_latent/model_epoch_best.pth')
     parser.add_argument('--pin_memory', type=bool, default=False)
-    parser.add_argument('--output', type=str, default='models/weights_ft.pth')
+    parser.add_argument('--output_path', type=str, default='models/')
     args = parser.parse_args()
     main(args)
     
